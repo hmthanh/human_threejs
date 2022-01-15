@@ -19,176 +19,130 @@ import mapCOL from "../assets/images/Map-COL.jpg";
 import mapSPEC from "../assets/images/Map-SPEC.jpg";
 import smoothUV from "../assets/images/Infinite-Level_02_Tangent_SmoothUV.jpg";
 
+import { VertexNormalsHelper } from "./VertexNormalsHelper.js";
+import { VertexTangentsHelper } from "./VertexTangentsHelper.js";
 
-let container, stats, loader;
-
-let camera, scene, renderer;
-
-let mesh;
-
-let directionalLight, pointLight, ambientLight;
-
-let mouseX = 0;
-let mouseY = 0;
-
-let targetX = 0;
-let targetY = 0;
-
-const windowHalfX = window.innerWidth / 2;
-const windowHalfY = window.innerHeight / 2;
-
-let composer, effectFXAA;
+let scene, renderer;
+let camera, light;
+let vnh;
+let vth;
 
 init();
 animate();
 
 function init() {
-  container = document.createElement("div");
-  document.body.appendChild(container);
-
-  camera = new THREE.PerspectiveCamera(
-    27,
-    window.innerWidth / window.innerHeight,
-    1,
-    10000
-  );
-  camera.position.z = 1700;
-  camera.position.x = 0;
-  camera.position.y = 20;
-
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
-
-  // LIGHTS
-
-  ambientLight = new THREE.AmbientLight(0x444444);
-  scene.add(ambientLight);
-
-  pointLight = new THREE.PointLight(0xffffff, 1.25, 1000);
-  pointLight.position.set(0, 0, 600);
-
-  scene.add(pointLight);
-
-  directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(1, -0.5, -1);
-  scene.add(directionalLight);
-
-  const textureLoader = new THREE.TextureLoader();
-
-  const diffuseMap = textureLoader.load(mapCOL);
-  diffuseMap.encoding = THREE.sRGBEncoding;
-
-  const specularMap = textureLoader.load(mapSPEC);
-  specularMap.encoding = THREE.sRGBEncoding;
-
-  const normalMap = textureLoader.load(smoothUV);
-
-  const material = new THREE.MeshPhongMaterial({
-    color: 0xdddddd,
-    specular: 0x222222,
-    shininess: 35,
-    map: diffuseMap,
-    specularMap: specularMap,
-    normalMap: normalMap,
-    normalScale: new THREE.Vector2(0.8, 0.8),
-  });
-
-  loader = new GLTFLoader();
-  loader.load(LeePerrySmith, function (gltf) {
-    createScene(gltf.scene.children[0].geometry, 100, material);
-  });
-
   renderer = new THREE.WebGLRenderer();
+  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  container.appendChild(renderer.domElement);
+  document.body.appendChild(renderer.domElement);
 
   //
 
-  stats = new Stats();
-  container.appendChild(stats.dom);
-
-  // COMPOSER
-
-  renderer.autoClear = false;
-
-  const renderModel = new RenderPass(scene, camera);
-
-  const effectBleach = new ShaderPass(BleachBypassShader);
-  const effectColor = new ShaderPass(ColorCorrectionShader);
-  effectFXAA = new ShaderPass(FXAAShader);
-  const gammaCorrection = new ShaderPass(GammaCorrectionShader);
-
-  effectFXAA.uniforms["resolution"].value.set(
-    1 / window.innerWidth,
-    1 / window.innerHeight
+  camera = new THREE.PerspectiveCamera(
+    70,
+    window.innerWidth / window.innerHeight,
+    1,
+    1000
   );
+  camera.position.z = 400;
 
-  effectBleach.uniforms["opacity"].value = 0.2;
+  scene = new THREE.Scene();
 
-  effectColor.uniforms["powRGB"].value.set(1.4, 1.45, 1.45);
-  effectColor.uniforms["mulRGB"].value.set(1.1, 1.1, 1.1);
+  light = new THREE.PointLight();
+  light.position.set(200, 100, 150);
+  scene.add(light);
 
-  composer = new EffectComposer(renderer);
+  scene.add(new THREE.PointLightHelper(light, 15));
 
-  composer.addPass(renderModel);
-  composer.addPass(effectFXAA);
-  composer.addPass(effectBleach);
-  composer.addPass(effectColor);
-  composer.addPass(gammaCorrection);
+  const gridHelper = new THREE.GridHelper(400, 40, 0x0000ff, 0x808080);
+  gridHelper.position.y = -150;
+  gridHelper.position.x = -150;
+  scene.add(gridHelper);
 
-  // EVENTS
+  const polarGridHelper = new THREE.PolarGridHelper(
+    200,
+    16,
+    8,
+    64,
+    0x0000ff,
+    0x808080
+  );
+  polarGridHelper.position.y = -150;
+  polarGridHelper.position.x = 200;
+  scene.add(polarGridHelper);
 
-  document.addEventListener("mousemove", onDocumentMouseMove);
+  const loader = new GLTFLoader();
+  loader.load(LeePerrySmith, function (gltf) {
+    const mesh = gltf.scene.children[0];
+
+    mesh.geometry.computeTangents(); // generates bad data due to degenerate UVs
+
+    const group = new THREE.Group();
+    group.scale.multiplyScalar(50);
+    scene.add(group);
+
+    // To make sure that the matrixWorld is up to date for the boxhelpers
+    group.updateMatrixWorld(true);
+
+    group.add(mesh);
+
+    vnh = new VertexNormalsHelper(mesh, 5);
+    scene.add(vnh);
+
+    vth = new VertexTangentsHelper(mesh, 5);
+    scene.add(vth);
+
+    scene.add(new THREE.BoxHelper(mesh));
+
+    const wireframe = new THREE.WireframeGeometry(mesh.geometry);
+    let line = new THREE.LineSegments(wireframe);
+    line.material.depthTest = false;
+    line.material.opacity = 0.25;
+    line.material.transparent = true;
+    line.position.x = 4;
+    group.add(line);
+    scene.add(new THREE.BoxHelper(line));
+
+    const edges = new THREE.EdgesGeometry(mesh.geometry);
+    line = new THREE.LineSegments(edges);
+    line.material.depthTest = false;
+    line.material.opacity = 0.25;
+    line.material.transparent = true;
+    line.position.x = -4;
+    group.add(line);
+    scene.add(new THREE.BoxHelper(line));
+
+    scene.add(new THREE.BoxHelper(group));
+    scene.add(new THREE.BoxHelper(scene));
+  });
+
+  //
+
   window.addEventListener("resize", onWindowResize);
 }
 
-function createScene(geometry, scale, material) {
-  mesh = new THREE.Mesh(geometry, material);
-
-  mesh.position.y = -50;
-  mesh.scale.x = mesh.scale.y = mesh.scale.z = scale;
-
-  scene.add(mesh);
-}
-
-//
-
 function onWindowResize() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-
-  camera.aspect = width / height;
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 
-  renderer.setSize(width, height);
-  composer.setSize(width, height);
-
-  effectFXAA.uniforms["resolution"].value.set(1 / width, 1 / height);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
-
-function onDocumentMouseMove(event) {
-  mouseX = event.clientX - windowHalfX;
-  mouseY = event.clientY - windowHalfY;
-}
-
-//
 
 function animate() {
   requestAnimationFrame(animate);
 
-  render();
+  const time = -performance.now() * 0.0003;
 
-  stats.update();
-}
+  camera.position.x = 400 * Math.cos(time);
+  camera.position.z = 400 * Math.sin(time);
+  camera.lookAt(scene.position);
 
-function render() {
-  targetX = mouseX * 0.001;
-  targetY = mouseY * 0.001;
+  light.position.x = Math.sin(time * 1.7) * 300;
+  light.position.y = Math.cos(time * 1.5) * 400;
+  light.position.z = Math.cos(time * 1.3) * 300;
 
-  if (mesh) {
-    mesh.rotation.y += 0.05 * (targetX - mesh.rotation.y);
-    mesh.rotation.x += 0.05 * (targetY - mesh.rotation.x);
-  }
+  if (vnh) vnh.update();
+  if (vth) vth.update();
 
-  composer.render();
+  renderer.render(scene, camera);
 }
