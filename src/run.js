@@ -52,7 +52,9 @@ function init() {
     1,
     10000
   );
-  camera.position.z = 1200;
+  camera.position.z = 1700;
+  camera.position.x = 0;
+  camera.position.y = 20;
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
