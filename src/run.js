@@ -13,182 +13,107 @@ import { BleachBypassShader } from "./BleachBypassShader.js";
 import { ColorCorrectionShader } from "./ColorCorrectionShader.js";
 import { FXAAShader } from "./FXAAShader.js";
 import { GammaCorrectionShader } from "./GammaCorrectionShader.js";
-import LeePerrySmith from "../assets/models/LeePerrySmith.glb";
-
-import mapCOL from "../assets/images/Map-COL.jpg";
-import mapSPEC from "../assets/images/Map-SPEC.jpg";
-import smoothUV from "../assets/images/Infinite-Level_02_Tangent_SmoothUV.jpg";
-
-
-let container, stats, loader;
-
-let camera, scene, renderer;
-
-let mesh;
-
-let directionalLight, pointLight, ambientLight;
-
-let mouseX = 0;
-let mouseY = 0;
-
-let targetX = 0;
-let targetY = 0;
-
-const windowHalfX = window.innerWidth / 2;
-const windowHalfY = window.innerHeight / 2;
-
-let composer, effectFXAA;
+import facecap from "../assets/models/facecap.glb";
+import { KTX2Loader } from "./KTX2Loader.js";
+import { MeshoptDecoder } from "./meshopt_decoder.module.js";
+import { RoomEnvironment } from "./RoomEnvironment.js";
 
 init();
-animate();
 
 function init() {
-  container = document.createElement("div");
+  let mixer;
+
+  const clock = new THREE.Clock();
+
+  const container = document.createElement("div");
   document.body.appendChild(container);
 
-  camera = new THREE.PerspectiveCamera(
-    27,
+  const camera = new THREE.PerspectiveCamera(
+    45,
     window.innerWidth / window.innerHeight,
     1,
-    10000
+    20
   );
-  camera.position.z = 1700;
-  camera.position.x = 0;
-  camera.position.y = 20;
+  camera.position.set(-1.8, 0.8, 3);
 
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+  const scene = new THREE.Scene();
 
-  // LIGHTS
-
-  ambientLight = new THREE.AmbientLight(0x444444);
-  scene.add(ambientLight);
-
-  pointLight = new THREE.PointLight(0xffffff, 1.25, 1000);
-  pointLight.position.set(0, 0, 600);
-
-  scene.add(pointLight);
-
-  directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(1, -0.5, -1);
-  scene.add(directionalLight);
-
-  const textureLoader = new THREE.TextureLoader();
-
-  const diffuseMap = textureLoader.load(mapCOL);
-  diffuseMap.encoding = THREE.sRGBEncoding;
-
-  const specularMap = textureLoader.load(mapSPEC);
-  specularMap.encoding = THREE.sRGBEncoding;
-
-  const normalMap = textureLoader.load(smoothUV);
-
-  const material = new THREE.MeshPhongMaterial({
-    color: 0xdddddd,
-    specular: 0x222222,
-    shininess: 35,
-    map: diffuseMap,
-    specularMap: specularMap,
-    normalMap: normalMap,
-    normalScale: new THREE.Vector2(0.8, 0.8),
-  });
-
-  loader = new GLTFLoader();
-  loader.load(LeePerrySmith, function (gltf) {
-    createScene(gltf.scene.children[0].geometry, 100, material);
-  });
-
-  renderer = new THREE.WebGLRenderer();
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
+
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+
   container.appendChild(renderer.domElement);
 
-  //
+  const ktx2Loader = new KTX2Loader();
+  ktx2Loader.setTranscoderPath("/");
+  ktx2Loader.detectSupport(renderer);
 
-  stats = new Stats();
-  container.appendChild(stats.dom);
+  new GLTFLoader()
+    .setKTX2Loader(ktx2Loader)
+    .setMeshoptDecoder(MeshoptDecoder)
+    .load(facecap, (gltf) => {
+      // const mesh = gltf.scene.children[0];
 
-  // COMPOSER
+      // scene.add(mesh);
 
-  renderer.autoClear = false;
+      // mixer = new THREE.AnimationMixer(mesh);
 
-  const renderModel = new RenderPass(scene, camera);
+      // mixer.clipAction(gltf.animations[0]).play();
+      // // GUI
 
-  const effectBleach = new ShaderPass(BleachBypassShader);
-  const effectColor = new ShaderPass(ColorCorrectionShader);
-  effectFXAA = new ShaderPass(FXAAShader);
-  const gammaCorrection = new ShaderPass(GammaCorrectionShader);
+      // const head = mesh.getObjectByName("mesh_2");
+      // const influences = head.morphTargetInfluences;
 
-  effectFXAA.uniforms["resolution"].value.set(
-    1 / window.innerWidth,
-    1 / window.innerHeight
-  );
+      // const gui = new GUI();
+      // gui.close();
 
-  effectBleach.uniforms["opacity"].value = 0.2;
+      // for (const [key, value] of Object.entries(head.morphTargetDictionary)) {
+      //   gui
+      //     .add(influences, value, 0, 1, 0.01)
+      //     .name(key.replace("blendShape1.", ""))
+      //     .listen(influences);
+      // }
+    });
 
-  effectColor.uniforms["powRGB"].value.set(1.4, 1.45, 1.45);
-  effectColor.uniforms["mulRGB"].value.set(1.1, 1.1, 1.1);
+  // const environment = new RoomEnvironment();
+  // const pmremGenerator = new THREE.PMREMGenerator(renderer);
 
-  composer = new EffectComposer(renderer);
+  // scene.background = new THREE.Color(0x666666);
+  // scene.environment = pmremGenerator.fromScene(environment).texture;
 
-  composer.addPass(renderModel);
-  composer.addPass(effectFXAA);
-  composer.addPass(effectBleach);
-  composer.addPass(effectColor);
-  composer.addPass(gammaCorrection);
+  // const controls = new OrbitControls(camera, renderer.domElement);
+  // controls.enableDamping = true;
+  // controls.minDistance = 2.5;
+  // controls.maxDistance = 5;
+  // controls.minAzimuthAngle = -Math.PI / 2;
+  // controls.maxAzimuthAngle = Math.PI / 2;
+  // controls.maxPolarAngle = Math.PI / 1.8;
+  // controls.target.set(0, 0.15, -0.2);
 
-  // EVENTS
+  // const stats = new Stats();
+  // container.appendChild(stats.dom);
 
-  document.addEventListener("mousemove", onDocumentMouseMove);
-  window.addEventListener("resize", onWindowResize);
-}
+  // renderer.setAnimationLoop(() => {
+  //   const delta = clock.getDelta();
 
-function createScene(geometry, scale, material) {
-  mesh = new THREE.Mesh(geometry, material);
+  //   if (mixer) {
+  //     mixer.update(delta);
+  //   }
 
-  mesh.position.y = -50;
-  mesh.scale.x = mesh.scale.y = mesh.scale.z = scale;
+  //   renderer.render(scene, camera);
 
-  scene.add(mesh);
-}
+  //   controls.update();
 
-//
+  //   stats.update();
+  // });
 
-function onWindowResize() {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  // window.addEventListener("resize", () => {
+  //   camera.aspect = window.innerWidth / window.innerHeight;
+  //   camera.updateProjectionMatrix();
 
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(width, height);
-  composer.setSize(width, height);
-
-  effectFXAA.uniforms["resolution"].value.set(1 / width, 1 / height);
-}
-
-function onDocumentMouseMove(event) {
-  mouseX = event.clientX - windowHalfX;
-  mouseY = event.clientY - windowHalfY;
-}
-
-//
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  render();
-
-  stats.update();
-}
-
-function render() {
-  targetX = mouseX * 0.001;
-  targetY = mouseY * 0.001;
-
-  if (mesh) {
-    mesh.rotation.y += 0.05 * (targetX - mesh.rotation.y);
-    mesh.rotation.x += 0.05 * (targetY - mesh.rotation.x);
-  }
-
-  composer.render();
+  //   renderer.setSize(window.innerWidth, window.innerHeight);
+  // });
 }
