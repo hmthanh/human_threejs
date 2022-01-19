@@ -236,86 +236,86 @@ class GLTFLoader extends Loader {
       }
     }
 
-    // const json = JSON.parse(content);
+    const json = JSON.parse(content);
 
-    // if (json.asset === undefined || json.asset.version[0] < 2) {
-    //   if (onError)
-    //     onError(
-    //       new Error(
-    //         "THREE.GLTFLoader: Unsupported asset. glTF versions >=2.0 are supported."
-    //       )
-    //     );
-    //   return;
-    // }
+    if (json.asset === undefined || json.asset.version[0] < 2) {
+      if (onError)
+        onError(
+          new Error(
+            "THREE.GLTFLoader: Unsupported asset. glTF versions >=2.0 are supported."
+          )
+        );
+      return;
+    }
 
-    // const parser = new GLTFParser(json, {
-    //   path: path || this.resourcePath || "",
-    //   crossOrigin: this.crossOrigin,
-    //   requestHeader: this.requestHeader,
-    //   manager: this.manager,
-    //   ktx2Loader: this.ktx2Loader,
-    //   meshoptDecoder: this.meshoptDecoder,
-    // });
+    const parser = new GLTFParser(json, {
+      path: path || this.resourcePath || "",
+      crossOrigin: this.crossOrigin,
+      requestHeader: this.requestHeader,
+      manager: this.manager,
+      ktx2Loader: this.ktx2Loader,
+      meshoptDecoder: this.meshoptDecoder,
+    });
 
-    // parser.fileLoader.setRequestHeader(this.requestHeader);
+    parser.fileLoader.setRequestHeader(this.requestHeader);
 
-    // for (let i = 0; i < this.pluginCallbacks.length; i++) {
-    //   const plugin = this.pluginCallbacks[i](parser);
-    //   plugins[plugin.name] = plugin;
+    for (let i = 0; i < this.pluginCallbacks.length; i++) {
+      const plugin = this.pluginCallbacks[i](parser);
+      plugins[plugin.name] = plugin;
 
-    //   // Workaround to avoid determining as unknown extension
-    //   // in addUnknownExtensionsToUserData().
-    //   // Remove this workaround if we move all the existing
-    //   // extension handlers to plugin system
-    //   extensions[plugin.name] = true;
-    // }
+      // Workaround to avoid determining as unknown extension
+      // in addUnknownExtensionsToUserData().
+      // Remove this workaround if we move all the existing
+      // extension handlers to plugin system
+      extensions[plugin.name] = true;
+    }
 
-    // if (json.extensionsUsed) {
-    //   for (let i = 0; i < json.extensionsUsed.length; ++i) {
-    //     const extensionName = json.extensionsUsed[i];
-    //     const extensionsRequired = json.extensionsRequired || [];
+    if (json.extensionsUsed) {
+      for (let i = 0; i < json.extensionsUsed.length; ++i) {
+        const extensionName = json.extensionsUsed[i];
+        const extensionsRequired = json.extensionsRequired || [];
 
-    //     switch (extensionName) {
-    //       case EXTENSIONS.KHR_MATERIALS_UNLIT:
-    //         extensions[extensionName] = new GLTFMaterialsUnlitExtension();
-    //         break;
+        switch (extensionName) {
+          case EXTENSIONS.KHR_MATERIALS_UNLIT:
+            extensions[extensionName] = new GLTFMaterialsUnlitExtension();
+            break;
 
-    //       case EXTENSIONS.KHR_MATERIALS_PBR_SPECULAR_GLOSSINESS:
-    //         extensions[extensionName] =
-    //           new GLTFMaterialsPbrSpecularGlossinessExtension();
-    //         break;
+          case EXTENSIONS.KHR_MATERIALS_PBR_SPECULAR_GLOSSINESS:
+            extensions[extensionName] =
+              new GLTFMaterialsPbrSpecularGlossinessExtension();
+            break;
 
-    //       case EXTENSIONS.KHR_DRACO_MESH_COMPRESSION:
-    //         extensions[extensionName] = new GLTFDracoMeshCompressionExtension(
-    //           json,
-    //           this.dracoLoader
-    //         );
-    //         break;
+          case EXTENSIONS.KHR_DRACO_MESH_COMPRESSION:
+            extensions[extensionName] = new GLTFDracoMeshCompressionExtension(
+              json,
+              this.dracoLoader
+            );
+            break;
 
-    //       case EXTENSIONS.KHR_TEXTURE_TRANSFORM:
-    //         extensions[extensionName] = new GLTFTextureTransformExtension();
-    //         break;
+          case EXTENSIONS.KHR_TEXTURE_TRANSFORM:
+            extensions[extensionName] = new GLTFTextureTransformExtension();
+            break;
 
-    //       case EXTENSIONS.KHR_MESH_QUANTIZATION:
-    //         extensions[extensionName] = new GLTFMeshQuantizationExtension();
-    //         break;
+          case EXTENSIONS.KHR_MESH_QUANTIZATION:
+            extensions[extensionName] = new GLTFMeshQuantizationExtension();
+            break;
 
-    //       default:
-    //         if (
-    //           extensionsRequired.indexOf(extensionName) >= 0 &&
-    //           plugins[extensionName] === undefined
-    //         ) {
-    //           console.warn(
-    //             'THREE.GLTFLoader: Unknown extension "' + extensionName + '".'
-    //           );
-    //         }
-    //     }
-    //   }
-    // }
+          default:
+            if (
+              extensionsRequired.indexOf(extensionName) >= 0 &&
+              plugins[extensionName] === undefined
+            ) {
+              console.warn(
+                'THREE.GLTFLoader: Unknown extension "' + extensionName + '".'
+              );
+            }
+        }
+      }
+    }
 
-    // parser.setExtensions(extensions);
-    // parser.setPlugins(plugins);
-    // parser.parse(onLoad, onError);
+    parser.setExtensions(extensions);
+    parser.setPlugins(plugins);
+    parser.parse(onLoad, onError);
   }
 
   parseAsync(data, path) {
@@ -2049,33 +2049,33 @@ class GLTFParser {
     )
       .then(function () {
         return Promise.all([
-          parser.getDependencies("scene"),
-          parser.getDependencies("animation"),
-          parser.getDependencies("camera"),
+          // parser.getDependencies("scene"),
+          // parser.getDependencies("animation"),
+          // parser.getDependencies("camera"),
         ]);
       })
       .then(function (dependencies) {
-        const result = {
-          scene: dependencies[0][json.scene || 0],
-          scenes: dependencies[0],
-          animations: dependencies[1],
-          cameras: dependencies[2],
-          asset: json.asset,
-          parser: parser,
-          userData: {},
-        };
+        // const result = {
+        //   scene: dependencies[0][json.scene || 0],
+        //   scenes: dependencies[0],
+        //   animations: dependencies[1],
+        //   cameras: dependencies[2],
+        //   asset: json.asset,
+        //   parser: parser,
+        //   userData: {},
+        // };
 
-        addUnknownExtensionsToUserData(extensions, result, json);
+        // addUnknownExtensionsToUserData(extensions, result, json);
 
-        assignExtrasToUserData(result, json);
+        // assignExtrasToUserData(result, json);
 
-        Promise.all(
-          parser._invokeAll(function (ext) {
-            return ext.afterRoot && ext.afterRoot(result);
-          })
-        ).then(function () {
-          onLoad(result);
-        });
+        // Promise.all(
+        //   parser._invokeAll(function (ext) {
+        //     return ext.afterRoot && ext.afterRoot(result);
+        //   })
+        // ).then(function () {
+        //   onLoad(result);
+        // });
       })
       .catch(onError);
   }
